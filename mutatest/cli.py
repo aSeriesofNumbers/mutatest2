@@ -14,9 +14,9 @@ import logging
 import re
 import shlex
 import sys
-import tomllib
 from collections.abc import Sequence
 from datetime import timedelta
+from importlib import metadata as importlib_metadata
 from pathlib import Path
 from textwrap import dedent
 from typing import Any, NamedTuple
@@ -30,8 +30,17 @@ from mutatest.run import Config, MutantTrialResult
 LOGGER = logging.getLogger(__name__)
 FORMAT = "%(asctime)s: %(message)s"
 DEBUG_FORMAT = "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
-PYPROJECT_FILE = Path(__file__).parent.parent / "pyproject.toml"
-PYPROJECT_CONTENTS = tomllib.loads(PYPROJECT_FILE.read_text())
+DISTRIBUTION_NAME = "mutatest2"
+
+
+def get_distribution_project_urls() -> dict[str, str]:
+    """Read the ``Project-URL`` entries from the installed distribution's metadata."""
+    project_url_entries = importlib_metadata.metadata(DISTRIBUTION_NAME).get_all("Project-URL") or []
+    project_urls: dict[str, str] = {}
+    for entry in project_url_entries:
+        label, _, url = entry.partition(", ")
+        project_urls[label.strip()] = url.strip()
+    return project_urls
 
 
 class SettingsFile(NamedTuple):
@@ -372,9 +381,9 @@ def cli_epilog() -> str:
      - {copyright}
     """
     ).format_map({
-        "version": PYPROJECT_CONTENTS["project"]["version"],
+        "version": importlib_metadata.version(DISTRIBUTION_NAME),
         "license": mutatest.__license__,
-        "url": PYPROJECT_CONTENTS["project"]["urls"]["Homepage"],
+        "url": get_distribution_project_urls()["Homepage"],
         "copyright": mutatest.__copyright__,
     })
 
